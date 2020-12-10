@@ -1,0 +1,165 @@
+SETUP BITBUCKET ON CENTOS-7
+
+In this post I will go through the full fresh installation of Atlassian Bitbucket on Centos7. I have fresh Centos installation which I will dedicate it to Bitbucket server. I will also use PostgreSQL as database. Atlassian has a guide for this but it is very generic to cover all possible combinations and doesn’t go into the details of installation and configuration of database. This post will have all you need to know on how to install Atlassian Bitbucket on Centos 7 in one place.
+Prerequisite
+OS: Centos 7
+Bitbucket: atlassian-bitbucket-7.6.0-x64
+Database: PostgreSQL-9.5
+GIT: Bitbucket version 7 and above requires git-2.0 and above
+Preparation
+Firsly you need to install git version 2 or above. 
+Follow the steps below to install a stable and latest git
+Remove any git version
+$ sudo yum remove git*
+The quickest way of installing the latest version of Git on CentOS 7 is from the End Point repository.
+$ sudo yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm
+Once repository is added, install Git 2.x on CentOS 7:
+$ sudo yum install git
+Check git version after installing git2u-all package
+$ git --version
+Install Latest Git (2.x) from source on CentOS 7
+As confirmed, the current version of Git is 2.24.1. But if you need more latest as at the time of your installation, you can follow these additional steps.
+In this method, you’ll be tasked with building git from source code. Install dependency packages required:
+$ sudo yum -y install epel-release
+$ sudo yum -y groupinstall "Development Tools"
+$ sudo yum -y install wget perl-CPAN gettext-devel perl-devel  openssl-devel  zlib-devel curl-devel expat-devel  getopt asciidoc xmlto docbook2X
+$ sudo ln -s /usr/bin/db2x_docbook2texi /usr/bin/docbook2x-texi
+Now Download and install  using the following command:
+$ export VER="2.27.0"
+$ wget https://github.com/git/git/archive/v${VER}.tar.gz
+$ tar -xvf v${VER}.tar.gz
+$ cd git-*
+$ make configure
+$ sudo ./configure --prefix=/usr
+$ sudo make
+$ sudo make install
+Now you can check the version again:
+$ git --version
+Download and install bitbucket
+Firstly, cd into /opt/ then download using the link below
+$ sudo wget https://www.atlassian.com/software/stash/downloads/binary/atlassian-bitbucket-7.6.0-x64.bin
+Make it executable
+$ sudo chmod +x atlassian-bitbucket-7.6.0-x64.bin
+Make the file below executable
+ sudo chmod +x atlassian-bitbucket-7.6.0-x64.bin 
+Start bit-bucket by running the following command
+$ sudo ./atlassian-bitbucket-7.6.0-x64.bin
+You will see something like these, follow the prompt. 
+Unpacking JRE ...Starting Installer ..., 2016 2:53:02 PM java.util.prefs.FileSystemPreferences$1 run
+INFO: Created user preferences directory.Feb 15, 2016 2:53:02 PM java.util.prefs.FileSystemPreferences$2 run
+INFO: Created system preferences directory in java.home.
+This will install Bitbucket 7.6.0 on your computer.
+OK [o, Enter], Cancel [c]oPlease choose one of the following:Install a new instance [1, Enter], Upgrade an existing instance [2], Install a new mirror [3], Upgrade an existing mirror [4]1Where should Bitbucket be installed?
+[/opt/atlassian/bitbucket/4.3.2]
+Default location for Bitbucket home directory
+The location for Bitbucket data.This will be the default location for repositories, plugins, and other data.
+Ensure that this location is not used by another Bitbucket installation.[/var/atlassian/application-data/bitbucket]
+Configure which ports Bitbucket will use.
+
+Bitbucket requires two TCP ports that are not being used by any other
+applications.
+The HTTP port is where users will access Bitbucket through their browsers.The control port is used to start and stop Bitbucket.
+HTTP Port Number[7990]8060Control Port Number[8006]
+
+
+For a production server we recommend that you run Bitbucket as aWindows/Linux service because Bitbucket will restart automatically when the
+computer restarts.Install Bitbucket as a service?Yes [y, Enter], No [n]
+yPlease review your Bitbucket installation settings
+
+Installation Directory: /opt/atlassian/bitbucket/4.3.2Home Directory: /var/atlassian/application-data/bitbucket
+HTTP Port: 8060Control Port: 8006Install as a service: Yes
+Install [i, Enter], Exit [e]
+i
+Extracting files ...
+  atlassian-bitbucket/WEB-INF/osgi-framework-bundles/org.apache.servicemix.
+Installation of Bitbucket is completeWould you like to launch Bitbucket?Yes [y, Enter], No [n]
+y
+Please wait a few moments while Bitbucket starts up.Launching Bitbucket ...
+Installation of Bitbucket 7.6.0 is completeYour installation of Bitbucket 4.3.2 is now ready and can be accessed via
+your browser.Bitbucket 7.6.0 can be accessed at http://localhost:8060Launch Bitbucket 4.3.2 in browser?Yes [y, Enter], No [n]
+n
+Open firewall ports
+Centos 7 now comes with firewalld pre-installed and activated by default. You need to open the needed ports to be able to access to the server through web browser.
+First check the active zones:
+firewall-cmd --get-active-zonespublic
+  interfaces: eth0
+then add the ports to the zones you want (public here)
+sudo firewall-cmd --zone=public --add-port=8060/tcp --permanent
+Then remember to reload the firewall for changes to take effect.
+sudo firewall-cmd --reload
+install database engine and connector
+Atlassian highly recommends not to use MySQL/MariaDB for the external database in real servers for Bitbucket. It seems to have performance and bug issues. PostgreSQL instead is the recommended database engine. So here i will install them.
+sudo yum localinstall sudo yum localinstall https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+sudo yum install postgresql-server postgresql-contrib
+
+sudo postgresql-setup initdb
+
+After initializing the database, you can start the database using:
+sudo systemctl start postgresql
+
+sudo yum update
+
+PostgreSQL Basic Setup
+In Linux by default, a user named postgres is created once PostgreSQL is installed. You can change the user’s password with the following command:
+sudo passwd postgres
+
+su - postgres
+
+psql postgres
+
+CREATE SCHEMA bitbucket;
+CREATE USER bitbucketuser PASSWORD 'password';
+
+GRANT ALL ON SCHEMA bitbucket TO bitbucketuser;
+GRANT ALL ON ALL TABLES IN SCHEMA bitbucket TO bitbucketuser;
+CREATE DATABASE bitbucket WITH ENCODING='UTF8' OWNER=bitbucketuser CONNECTION LIMIT=-1;
+.\q
+
+Exit
+
+
+Post-installation commands
+After installing the packages, a database needs to be initialised and configured.
+Data Directory
+The PostgreSQL data directory has all the data files for the database. The variable PGDATA is used to reference this directory.
+export PGDATA /var/lib/pgsql/9.5/data
+Initialise
+The first command (only needed once) is to initialise the database in PGDATA.
+sudo /usr/pgsql-9.5/bin/postgresql95-setup initdb
+ 
+Control service
+To control the database service in RHEL 7.1+ and CentOS 7.1+, Systemd is introduced.
+Use this to start the service and make sure it starts at the startup:
+ systemctl start postgresql-9.5.service
+ systemctl enable postgresql-9.5.service
+create and setup database
+su -
+now you're loged in as admin.
+#su - postgres
+-bash-4.2$ psql
+psql (9.2.14, server 9.5.1)
+WARNING: psql version 9.2, server version 9.5.
+ Some psql features might not work.
+Type "help" for help.
+
+Now you are in the psql environment. run below commands
+CREATE SCHEMA bitbucket;
+CREATE USER bitbucketuser PASSWORD 'bitbucketdbpassword';
+GRANT ALL ON SCHEMA bitbucket TO bitbucketuser;
+GRANT ALL ON ALL TABLES IN SCHEMA bitbucket TO bitbucketuser;
+CREATE DATABASE bitbucket WITH ENCODING='UTF8' OWNER=bitbucketuser CONNECTION LIMIT=-1;
+configure authentication methods
+default authentication method for local connections in PostgreSQL is set to ‘ident’ that means it will get the operating system user name of the client by contacting the ident server on the client and check if it matches the requested database user name. You can read more on this on official PostgreSQL site.
+As we are not planing to have a ident server this needs to be updated. I use md5 method. Other methods can be used too depending on the situation. All these settings resting in pg_hba.conf file in data folder of the postgresql installation.
+so need to do below:
+sudo vim /var/lib/pgsql/9.5/data/pg_hba.conf
+just one line needs to be updated. It is towards the end of the file (line 82 in my case) the one starts with host.
+this line:
+host    all             all             127.0.0.1/32            ident
+needs to be updated to:
+host    all             all             127.0.0.1/32            md5
+then restart the service.
+Now all is set to start setting up your bitbucket server.
+Set up Bitbucket
+Now open web browser and point to the address that you installed the server.
+Select the language and PostgreSQL as external or internal depending on you DB installation.
